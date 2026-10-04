@@ -1,24 +1,13 @@
-/*================================================================
-*   Copyright (C) 2024Ltd. All rights reserved.
-*   
-*   文件名称：intel_gmch.h
-*   创 建 者：sw
-*   创建日期：2024年05月15日
-*   描    述：
-*
-================================================================*/
+/* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * Copyright (C) 2024Ltd. All rights reserved.
+ * Original author: sw
+ */
+#ifndef LSDC_GMCH_H
+#define LSDC_GMCH_H
 
-
-#ifndef INTEL_GMCH_H__
-#define INTEL_GMCH_H__
-
-#include <linux/types.h>
-
-struct pci_dev;
 struct drm_lsdc_private;
 
-unsigned int lsdc_gmch_vga_set_decode(struct pci_dev *pdev, bool enable_decode);
+int lsdc_gmch_init(struct drm_lsdc_private *dev_priv);
 
-
-#endif //INTEL_GMCH_H__
-
+#endif

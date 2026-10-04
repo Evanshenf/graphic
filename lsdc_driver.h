@@ -1,28 +1,19 @@
-/*================================================================
-*   Copyright (C) 2024Ltd. All rights reserved.
-*   
-*   文件名称：lsdc_driver.h
-*   创 建 者：sw
-*   创建日期：2024年05月13日
-*   描    述：
-*
-================================================================*/
-
-
-#ifndef LSDC_DRIVER_H__
-#define LSDC_DRIVER_H__
-
-#include <linux/pm.h>
+/* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * Copyright (C) 2024Ltd. All rights reserved.
+ * Original author: sw
+ */
+#ifndef LSDC_DRIVER_H
+#define LSDC_DRIVER_H
 
 struct pci_dev;
 struct pci_device_id;
 
+#define DRIVER_NAME "graphic"
+#define DRIVER_DESC "Manual-based LS7A2000 display controller"
 
-#define DRIVER_NAME "lsdc"
-#define DRIVER_DESC "Loongson Graphics "
-#define DRIVER_DATE "20240513"
-#define DRIVER_TIMESTAMP  1715529600
-int lsdc_driver_probe(struct pci_dev *pdev, const struct pci_device_id *ent);
+int lsdc_driver_probe(struct pci_dev *pdev, const struct pci_device_id *id);
+void lsdc_driver_remove(struct pci_dev *pdev);
+void lsdc_driver_shutdown(struct pci_dev *pdev);
 
-#endif //LSDC_DRIVER_H__
-
+#endif

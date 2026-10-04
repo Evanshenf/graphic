@@ -1,183 +1,136 @@
-/*================================================================
- *   Copyright (C) 2024Ltd. All rights reserved.
- *   
- *   文件名称：lsdc_driver.c
- *   创 建 者：sw
- *   创建日期：2024年05月13日
- *   描    述：
- *
- ================================================================*/
-#include <linux/acpi.h>
-#include <linux/device.h>
-#include <linux/module.h>
-#include <linux/oom.h>
-#include <linux/pci.h>
-#include <linux/pm.h>
-#include <linux/pm_runtime.h>
-#include <linux/slab.h>
-#include <linux/string_helpers.h>
-#include <linux/vga_switcheroo.h>
-#include <linux/vt.h>
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (C) 2024Ltd. All rights reserved.
+ * Original author: sw
+ */
 
-#include <drm/drm_aperture.h>
+#include <linux/dma-mapping.h>
+#include <linux/module.h>
+#include <linux/pci.h>
+#include <linux/sizes.h>
+
+#include <drm/clients/drm_client_setup.h>
 #include <drm/drm_atomic_helper.h>
+#include <drm/drm_drv.h>
+#include <drm/drm_fbdev_ttm.h>
+#include <drm/drm_file.h>
+#include <drm/drm_fourcc.h>
+#include <drm/drm_gem.h>
+#include <drm/drm_gem_ttm_helper.h>
 #include <drm/drm_ioctl.h>
-#include <drm/drm_managed.h>
 #include <drm/drm_probe_helper.h>
 
-#include <drm/drm_fbdev_generic.h>
-#include <linux/console.h>
-
-#include <drm/drm.h>
-#include <drm/drm_file.h>
-#include <drm/drm_device.h>
-#include <drm/drm_gem.h>
-#include <drm/drm_drv.h>
-
+#include "display/lsdc_display_driver.h"
 #include "lsdc_driver.h"
 #include "lsdc_drv.h"
+#include "lsdc_gem.h"
 #include "lsdc_region_ttm.h"
-#include "display/lsdc_display_driver.h"
+#include "soc/lsdc_gmch.h"
 
-static const struct drm_driver lsdc_kms_driver ;
+DEFINE_DRM_GEM_FOPS(lsdc_gem_fops);
 
-static void lsdc_driver_register(struct drm_lsdc_private *dev_priv)
-{
-	/* Reveal our presence to userspace */
-	if (drm_dev_register(&dev_priv->drm_dev, 0)) {
-		drm_err(&dev_priv->drm_dev,
-				"Failed to register driver for userspace access!\n");
-		return;
-	}
-
-	lsdc_display_driver_register(dev_priv);
-
-
-
-}
-static int lsdc_driver_early_probe(struct drm_lsdc_private *dev_priv)
-{
-	int ret = 0;
-	ret = lsdc_ttm_init(dev_priv);
-	if (ret)
-		goto err_ttm;
-
-	lsdc_gem_init(&dev_priv->drm_dev);
-
-err_ttm:
-	return ret;
-
-}
-	static struct drm_lsdc_private *
-lsdc_driver_create(struct pci_dev *pdev, const struct pci_device_id *ent)
-{
-	struct drm_lsdc_private *lsdc;
-	struct drm_device *dev;
-	struct pci_dev *pdev_gpu;
-	int ret = 0;
-	lsdc = devm_drm_dev_alloc(&pdev->dev, &lsdc_kms_driver,
-			struct drm_lsdc_private, drm_dev);
-	if (IS_ERR(lsdc))
-		return lsdc;
-	dev = &lsdc->drm_dev;
-	pci_set_drvdata(pdev, lsdc);
-
-	pdev_gpu = pci_get_domain_bus_and_slot(pci_domain_nr(pdev->bus),pdev->bus->number,PCI_DEVFN(6,0));
-	if (!pdev_gpu) {
-		drm_err(dev, "NO gpu device, then no VRAM\n");
-		return ERR_PTR(-EIO);
-	}
-	lsdc->vram_base = pci_resource_start(pdev_gpu, 2);
-	lsdc->vram_size = pci_resource_len(pdev_gpu, 2);
-
-	drm_info(dev, "Dedicated vram start: 0x%llx, size: %uMiB\n",
-			(u64)lsdc->vram_base, (u32)(lsdc->vram_size >> 20));
-
-	ret = drm_aperture_remove_conflicting_pci_framebuffers(pdev, &lsdc_kms_driver);
-	ret = drmm_mutex_init(dev, &lsdc->ioregs_lock);
-	if (ret)
-		return ERR_PTR(ret);
-	lsdc->ioregs = pcim_iomap(pdev, 0, 0); 
-	if (!lsdc->ioregs)
-		return ERR_PTR(-EIO);
-
-	return lsdc;
-}
-
-
-int lsdc_driver_probe(struct pci_dev *pdev,const struct pci_device_id *ent)
-{
-	struct drm_lsdc_private *lsdc;
-	struct drm_device *drm_dev;
-	int ret;
-	ret = pci_enable_device(pdev);
-	if (ret) {
-		pr_err("Failed to enable graphics device: %pe\n", ERR_PTR(ret));
-		return ret;
-	}
-	lsdc = lsdc_driver_create(pdev, ent);
-	if (IS_ERR(lsdc)) {
-		pci_disable_device(pdev);
-		return PTR_ERR(lsdc);
-	}
-	lsdc_driver_early_probe(lsdc);
-	if (ret < 0)
-		goto out_pci_disable;
-	drm_dev = &lsdc->drm_dev;
-
-	ret = lsdc_display_driver_probe_noirq(lsdc);
-
-	lsdc_driver_register(lsdc);
-
-
-	drm_fbdev_generic_setup(drm_dev, 32);
-	return 0;
-out_pci_disable:
-	pci_disable_device(pdev);
-	drm_err(drm_dev, "Device initialization failed (%d)\n", ret);
-	return ret;
-}
-
-
-
-
-
-
-
-
-
-
-static const struct file_operations lsdc_driver_fops = {
-	.owner = THIS_MODULE,
-	.open = drm_open,
-	.release = drm_release_noglobal,
-	.unlocked_ioctl = drm_ioctl,
-	.mmap = drm_gem_mmap,
-	.poll = drm_poll,
-	.read = drm_read,
-	.compat_ioctl = drm_compat_ioctl,
-	.llseek = noop_llseek,
-#ifdef CONFIG_PROC_FS
-	.show_fdinfo = drm_show_fdinfo,
-#endif
-};
-
-#define DRIVER_MAJOR		1
-#define DRIVER_MINOR		1
-#define DRIVER_PATCHLEVEL	0
 static const struct drm_driver lsdc_kms_driver = {
-
-	.driver_features = DRIVER_GEM |
-		DRIVER_RENDER| DRIVER_MODESET | DRIVER_ATOMIC,
-
-	.fops = &lsdc_driver_fops,
-	.major = DRIVER_MAJOR,
+	.driver_features = DRIVER_GEM | DRIVER_MODESET | DRIVER_ATOMIC,
+	.fops = &lsdc_gem_fops,
 	.name = DRIVER_NAME,
 	.desc = DRIVER_DESC,
-	.date = DRIVER_DATE,
-	.major = DRIVER_MAJOR,
-	.minor = DRIVER_MINOR,
-	.patchlevel = DRIVER_PATCHLEVEL,
-
-
+	.major = 1,
+	.minor = 1,
+	.dumb_create = lsdc_gem_dumb_create,
+	.dumb_map_offset = drm_gem_ttm_dumb_map_offset,
+	DRM_FBDEV_TTM_DRIVER_OPS,
 };
+
+int lsdc_driver_probe(struct pci_dev *pdev, const struct pci_device_id *id)
+{
+	struct drm_lsdc_private *dev_priv;
+	struct drm_device *drm;
+	void __iomem *ioregs;
+	int ret;
+
+	ret = pcim_enable_device(pdev);
+	if (ret)
+		return ret;
+
+	if (!(pci_resource_flags(pdev, 0) & IORESOURCE_MEM) ||
+	    pci_resource_len(pdev, 0) < SZ_64K)
+		return dev_err_probe(&pdev->dev, -ENODEV,
+				     "DC BAR0 must cover the 64 KiB register window\n");
+
+	ioregs = pcim_iomap_region(pdev, 0, DRIVER_NAME);
+	if (IS_ERR(ioregs))
+		return PTR_ERR(ioregs);
+
+	ret = dma_set_mask_and_coherent(&pdev->dev, DMA_BIT_MASK(32));
+	if (ret)
+		return ret;
+
+	dev_priv = devm_drm_dev_alloc(&pdev->dev, &lsdc_kms_driver,
+				      struct drm_lsdc_private, drm_dev);
+	if (IS_ERR(dev_priv))
+		return PTR_ERR(dev_priv);
+
+	dev_priv->pdev = pdev;
+	dev_priv->ioregs = ioregs;
+	spin_lock_init(&dev_priv->irq_lock);
+	drm = &dev_priv->drm_dev;
+	pci_set_drvdata(pdev, dev_priv);
+
+	ret = lsdc_gmch_init(dev_priv);
+	if (ret)
+		return dev_err_probe(&pdev->dev, ret,
+				     "Cannot claim paired GPU VRAM and PIX PLL window\n");
+
+	lsdc_gem_init(drm);
+	ret = lsdc_ttm_init(dev_priv);
+	if (ret)
+		return ret;
+
+	/* Display initialization captures firmware state before changing HW. */
+	ret = lsdc_display_driver_init(dev_priv);
+	if (ret)
+		return ret;
+
+	ret = lsdc_irq_init(dev_priv);
+	if (ret)
+		goto err_shutdown;
+
+	ret = drm_dev_register(drm, 0);
+	if (ret)
+		goto err_irq;
+
+	/* XRGB8888 selects 32-bit storage while keeping the alpha byte unused. */
+	drm_client_setup(drm, drm_format_info(DRM_FORMAT_XRGB8888));
+	return 0;
+
+err_irq:
+	drm_kms_helper_poll_disable(drm);
+	drm_atomic_helper_shutdown(drm);
+	lsdc_irq_fini(dev_priv);
+	return ret;
+
+err_shutdown:
+	drm_kms_helper_poll_disable(drm);
+	drm_atomic_helper_shutdown(drm);
+	return ret;
+}
+
+void lsdc_driver_remove(struct pci_dev *pdev)
+{
+	struct drm_lsdc_private *dev_priv = pci_get_drvdata(pdev);
+	struct drm_device *drm = &dev_priv->drm_dev;
+
+	drm_dev_unregister(drm);
+	drm_kms_helper_poll_disable(drm);
+	drm_atomic_helper_shutdown(drm);
+	lsdc_irq_fini(dev_priv);
+}
+
+void lsdc_driver_shutdown(struct pci_dev *pdev)
+{
+	struct drm_lsdc_private *dev_priv = pci_get_drvdata(pdev);
+
+	drm_kms_helper_poll_disable(&dev_priv->drm_dev);
+	drm_atomic_helper_shutdown(&dev_priv->drm_dev);
+	lsdc_irq_fini(dev_priv);
+}

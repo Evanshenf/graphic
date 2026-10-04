@@ -1,36 +1,32 @@
 # SPDX-License-Identifier: GPL-2.0
 
+ifneq ($(KERNELRELEASE),)
 
-subdir-ccflags-y += -I/home/virgo/graphic
+ccflags-y += -I$(src)
 
-loongson-y += lsdc_driver.o \
-	lsdc_pci.o \
-	lsdc_params.o \
-	lsdc_mitigations.o \
-	lsdc_module.o \
-	lsdc_region_ttm.o \
-	lsdc_gem.o \
+obj-m += graphic.o
 
+graphic-y := lsdc_module.o \
+	     lsdc_pci.o \
+	     lsdc_driver.o \
+	     soc/lsdc_gmch.o \
+	     lsdc_region_ttm.o \
+	     lsdc_gem.o \
+	     gem/lsdc_gem_ttm.o \
+	     display/lsdc_display_driver.o \
+	     display/lsdc_plane.o \
+	     display/lsdc_crtc.o \
+	     display/lsdc_output.o
 
+else
 
-gem-y := gem/lsdc_gem_ttm.o
-loongson-y += \
-    $(gem-y)
+KDIR ?= /lib/modules/$(shell uname -r)/build
 
-#modesetting core code
-
-loongson-y +=\
-	display/lsdc_display_driver.o \
-	display/lsdc_vga.o \
-
-loongson-y +=\
-	soc/lsdc_gmch.o
-
-obj-m += loongson.o
-
-
+.PHONY: all clean
 all:
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
-clean:
-	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
+	$(MAKE) -C $(KDIR) M=$(CURDIR) modules
 
+clean:
+	$(MAKE) -C $(KDIR) M=$(CURDIR) clean
+
+endif

@@ -1,22 +1,16 @@
-/*================================================================
- *   Copyright (C) 2024Ltd. All rights reserved.
- *   
- *   文件名称：lsdc_display_driver.h
- *   创 建 者：sw
- *   创建日期：2024年05月15日
- *   描    述：
- *
- ================================================================*/
+/* SPDX-License-Identifier: GPL-2.0 */
+#ifndef LSDC_DISPLAY_DRIVER_H
+#define LSDC_DISPLAY_DRIVER_H
 
+struct drm_crtc;
+struct drm_lsdc_private;
+struct lsdc_display_pipe;
 
-#ifndef LSDC_DISPLAY_DRIVER_H__
-#define LSDC_DISPLAY_DRIVER_H__
-#include <linux/types.h>
-#include "lsdc_drv.h"
+int lsdc_display_driver_init(struct drm_lsdc_private *dev_priv);
+int lsdc_plane_init(struct lsdc_display_pipe *pipe);
+int lsdc_crtc_init(struct lsdc_display_pipe *pipe);
+void lsdc_crtc_abort_pending(struct drm_crtc *crtc);
+int lsdc_irq_init(struct drm_lsdc_private *dev_priv);
+void lsdc_irq_fini(struct drm_lsdc_private *dev_priv);
 
-int lsdc_display_driver_probe_noirq (struct drm_lsdc_private *lsdc);
-
-void lsdc_display_driver_register(struct drm_lsdc_private *lsdc);
-
-#endif //LSDC_DISPLAY_DRIVER_H__
-
+#endif

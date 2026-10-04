@@ -1,20 +1,16 @@
-/*================================================================
-*   Copyright (C) 2024Ltd. All rights reserved.
-*   
-*   文件名称：lsdc_gem_ttm.h
-*   创 建 者：sw
-*   创建日期：2024年05月15日
-*   描    述：
-*
-================================================================*/
+/* SPDX-License-Identifier: GPL-2.0 */
+/*
+ * Copyright (C) 2024Ltd. All rights reserved.
+ * Original author: sw
+ */
+#ifndef LSDC_GEM_TTM_H
+#define LSDC_GEM_TTM_H
 
+#include <linux/types.h>
 
-#ifndef LSDC_GEM_TTM_H__
-#define LSDC_GEM_TTM_H__
+struct drm_device;
+struct drm_gem_object;
 
-#include <drm/ttm/ttm_placement.h>
+struct drm_gem_object *lsdc_gem_ttm_create(struct drm_device *drm, size_t size);
 
-//struct ttm_device_funcs *lsdc_ttm_driver(void);
-
-#endif //LSDC_GEM_TTM_H__
-
+#endif

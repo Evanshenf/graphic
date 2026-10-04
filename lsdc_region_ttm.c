@@ -1,186 +1,160 @@
-/*================================================================
-*   Copyright (C) 2024Ltd. All rights reserved.
-*   
-*   文件名称：lsdc_region_ttm.c
-*   创 建 者：sw
-*   创建日期：2024年05月15日
-*   描    述：
-*
-================================================================*/
+// SPDX-License-Identifier: GPL-2.0
+/*
+ * Copyright (C) 2024Ltd. All rights reserved.
+ * Original author: sw
+ */
+#include <linux/fs.h>
+#include <linux/mm.h>
+#include <linux/overflow.h>
+#include <linux/slab.h>
 
-#include <drm/ttm/ttm_device.h>
+#include <drm/drm_managed.h>
+#include <drm/drm_print.h>
+#include <drm/ttm/ttm_bo.h>
+#include <drm/ttm/ttm_placement.h>
 #include <drm/ttm/ttm_range_manager.h>
+#include <drm/ttm/ttm_tt.h>
+
 #include "lsdc_drv.h"
 #include "lsdc_region_ttm.h"
-#include "gem/lsdc_gem_ttm.h"
 
-
-
-static void lsdc_bo_set_placement(struct lsdc_bo *lbo, u32 domain);
-
-
-
-
-
-
-
-
-
-u64 lsdc_bo_gpu_offset(struct lsdc_bo *lbo)
+static struct ttm_tt *lsdc_ttm_tt_create(struct ttm_buffer_object *bo,
+					 u32 page_flags)
 {
-    struct ttm_buffer_object *tbo = &lbo->tbo;
-    struct drm_device *ddev = tbo->base.dev;
-    struct ttm_resource *resource = tbo->resource;
+	struct ttm_tt *tt;
+	int ret;
 
-    if (unlikely(!tbo->pin_count)) {
-        drm_err(ddev, "unpinned bo, gpu virtual address is invalid\n");
-        return 0;
-    }
+	tt = kzalloc_obj(*tt);
+	if (!tt)
+		return NULL;
 
-    if (unlikely(resource->mem_type == TTM_PL_SYSTEM))
-        return 0;
+	ret = ttm_tt_init(tt, bo, page_flags | TTM_TT_FLAG_ZERO_ALLOC,
+			  ttm_cached, 0);
+	if (ret) {
+		kfree(tt);
+		return NULL;
+	}
 
-    return resource->start << PAGE_SHIFT;
+	return tt;
 }
 
-int lsdc_ttm_init(struct drm_lsdc_private *lsdc)
+static int lsdc_ttm_tt_populate(struct ttm_device *bdev, struct ttm_tt *tt,
+				struct ttm_operation_ctx *ctx)
 {
-	struct drm_device *drm= &lsdc->drm_dev;
-	return ttm_device_init(&lsdc->bdev,lsdc_ttm_driver(),
-			drm->dev, drm->anon_inode->i_mapping,
-			drm->vma_offset_manager, false, true);
-}
-void lsdc_bo_unpin(struct lsdc_bo *lbo)
-{
-    struct ttm_buffer_object *tbo = &lbo->tbo;
-    struct drm_lsdc_private *ldev = tdev_to_ldev(tbo->bdev);
-
-    if (unlikely(!tbo->pin_count)) {
-        drm_dbg(&ldev->drm_dev, "%p unpin is not necessary\n", lbo);
-        return;
-    }
-
-    ttm_bo_unpin(tbo);
-
-    if (!tbo->pin_count) {
-        if (tbo->resource->mem_type == TTM_PL_VRAM)
-            ldev->vram_pinned_size -= lsdc_bo_size(lbo);
-        else if (tbo->resource->mem_type == TTM_PL_TT)
-            ldev->gtt_pinned_size -= lsdc_bo_size(lbo);
-    }
+	return ttm_pool_alloc(&bdev->pool, tt, ctx);
 }
 
-
-
-
-void lsdc_bo_ref(struct lsdc_bo *lbo)
+static void lsdc_ttm_tt_unpopulate(struct ttm_device *bdev, struct ttm_tt *tt)
 {
-    struct ttm_buffer_object *tbo = &lbo->tbo;
-
-    ttm_bo_get(tbo);
+	ttm_pool_free(&bdev->pool, tt);
 }
 
-void lsdc_bo_unref(struct lsdc_bo *lbo)
+static void lsdc_ttm_tt_destroy(struct ttm_device *bdev, struct ttm_tt *tt)
 {
-    struct ttm_buffer_object *tbo = &lbo->tbo;
-
-    ttm_bo_put(tbo);
+	ttm_tt_fini(tt);
+	kfree(tt);
 }
 
-
-
-size_t lsdc_bo_size(struct lsdc_bo *lbo)
+static void lsdc_ttm_evict_flags(struct ttm_buffer_object *bo,
+				 struct ttm_placement *placement)
 {
-    struct ttm_buffer_object *tbo = &lbo->tbo;
+	static const struct ttm_place system = {
+		.mem_type = TTM_PL_SYSTEM,
+	};
 
-    return tbo->base.size;
+	placement->placement = &system;
+	placement->num_placement = 1;
 }
 
-int lsdc_bo_reserve(struct lsdc_bo *lbo)
+static int lsdc_ttm_move(struct ttm_buffer_object *bo, bool evict,
+			 struct ttm_operation_ctx *ctx,
+			 struct ttm_resource *new_mem, struct ttm_place *hop)
 {
-    return ttm_bo_reserve(&lbo->tbo, true, false, NULL);
+	if (!bo->resource) {
+		ttm_bo_move_null(bo, new_mem);
+		return 0;
+	}
+
+	return ttm_bo_move_memcpy(bo, ctx, new_mem);
 }
 
-void lsdc_bo_unreserve(struct lsdc_bo *lbo)
+static int lsdc_ttm_io_mem_reserve(struct ttm_device *bdev,
+				   struct ttm_resource *mem)
 {
-    return ttm_bo_unreserve(&lbo->tbo);
+	struct drm_lsdc_private *dev_priv =
+		container_of(bdev, struct drm_lsdc_private, bdev);
+	u64 offset, address;
+
+	mem->bus.addr = NULL;
+	mem->bus.offset = 0;
+	mem->bus.is_iomem = false;
+	mem->bus.caching = ttm_cached;
+
+	if (mem->mem_type == TTM_PL_SYSTEM)
+		return 0;
+	if (mem->mem_type != TTM_PL_VRAM)
+		return -EINVAL;
+	if (mem->start > (U64_MAX >> PAGE_SHIFT))
+		return -EOVERFLOW;
+
+	offset = (u64)mem->start << PAGE_SHIFT;
+	if (offset > dev_priv->vram_size ||
+	    mem->size > dev_priv->vram_size - offset)
+		return -EINVAL;
+	if (check_add_overflow((u64)dev_priv->vram_base, offset, &address))
+		return -EOVERFLOW;
+
+	mem->bus.offset = address;
+	mem->bus.is_iomem = true;
+	mem->bus.caching = ttm_write_combined;
+
+	return 0;
 }
 
-int lsdc_bo_pin(struct lsdc_bo *lbo, u32 domain, u64 *gpu_addr)
+static const struct ttm_device_funcs lsdc_ttm_funcs = {
+	.ttm_tt_create = lsdc_ttm_tt_create,
+	.ttm_tt_populate = lsdc_ttm_tt_populate,
+	.ttm_tt_unpopulate = lsdc_ttm_tt_unpopulate,
+	.ttm_tt_destroy = lsdc_ttm_tt_destroy,
+	.eviction_valuable = ttm_bo_eviction_valuable,
+	.evict_flags = lsdc_ttm_evict_flags,
+	.move = lsdc_ttm_move,
+	.io_mem_reserve = lsdc_ttm_io_mem_reserve,
+};
+
+static void lsdc_ttm_fini(struct drm_device *drm, void *data)
 {
-    struct ttm_operation_ctx ctx = { false, false };
-    struct ttm_buffer_object *tbo = &lbo->tbo;
-    struct drm_lsdc_private *ldev = tdev_to_ldev(tbo->bdev);
-    int ret;
+	struct drm_lsdc_private *dev_priv = data;
 
-    if (tbo->pin_count)
-        goto bo_pinned;
-
-    if (lbo->sharing_count && domain == LSDC_GEM_DOMAIN_VRAM)
-        return -EINVAL;
-
-    if (domain)
-        lsdc_bo_set_placement(lbo, domain);
-
-    ret = ttm_bo_validate(tbo, &lbo->placement, &ctx);
-    if (unlikely(ret)) {
-        drm_err(&ldev->drm_dev, "%p validate failed: %d\n", lbo, ret);
-        return ret;
-    }
-
-    if (domain == LSDC_GEM_DOMAIN_VRAM)
-        ldev->vram_pinned_size += lsdc_bo_size(lbo);
-    else if (domain == LSDC_GEM_DOMAIN_GTT)
-        ldev->gtt_pinned_size += lsdc_bo_size(lbo);
-
-bo_pinned:
-    ttm_bo_pin(tbo);
-
-    if (gpu_addr)
-        *gpu_addr = lsdc_bo_gpu_offset(lbo);
-
-    return 0;
+	drm_WARN_ON(drm, ttm_range_man_fini(&dev_priv->bdev, TTM_PL_VRAM));
+	ttm_device_fini(&dev_priv->bdev);
 }
 
-static void lsdc_bo_set_placement(struct lsdc_bo *lbo, u32 domain)
+int lsdc_ttm_init(struct drm_lsdc_private *dev_priv)
 {
-    u32 c = 0;
-    u32 pflags = 0;
-    u32 i;
+	struct drm_device *drm = &dev_priv->drm_dev;
+	u64 usable_size = round_down((u64)dev_priv->vram_size, PAGE_SIZE);
+	u64 end;
+	int ret;
 
-    if (lbo->tbo.base.size <= PAGE_SIZE)
-        pflags |= TTM_PL_FLAG_TOPDOWN;
+	if (!usable_size || !IS_ALIGNED(dev_priv->vram_base, PAGE_SIZE) ||
+	    !IS_ALIGNED(dev_priv->vram_bus_base, PAGE_SIZE))
+		return -EINVAL;
+	if (check_add_overflow((u64)dev_priv->vram_base, usable_size - 1, &end) ||
+	    check_add_overflow(dev_priv->vram_bus_base, usable_size - 1, &end))
+		return -EOVERFLOW;
 
-    lbo->placement.placement = lbo->placements;
-    lbo->placement.busy_placement = lbo->placements;
+	ret = ttm_device_init(&dev_priv->bdev, &lsdc_ttm_funcs, drm->dev,
+			      drm->anon_inode->i_mapping, drm->vma_offset_manager, 0);
+	if (ret)
+		return ret;
 
-    if (domain & LSDC_GEM_DOMAIN_VRAM) {
-        lbo->placements[c].mem_type = TTM_PL_VRAM;
-        lbo->placements[c++].flags = pflags;
-    }
+	ret = ttm_range_man_init(&dev_priv->bdev, TTM_PL_VRAM, false,
+				 usable_size >> PAGE_SHIFT);
+	if (ret) {
+		ttm_device_fini(&dev_priv->bdev);
+		return ret;
+	}
 
-    if (domain & LSDC_GEM_DOMAIN_GTT) {
-        lbo->placements[c].mem_type = TTM_PL_TT;
-        lbo->placements[c++].flags = pflags;
-    }
-
-    if (domain & LSDC_GEM_DOMAIN_SYSTEM) {
-        lbo->placements[c].mem_type = TTM_PL_SYSTEM;
-        lbo->placements[c++].flags = 0;
-    }
-
-    if (!c) {
-        lbo->placements[c].mem_type = TTM_PL_SYSTEM;
-        lbo->placements[c++].flags = 0;
-    }
-
-    lbo->placement.num_placement = c;
-    lbo->placement.num_busy_placement = c;
-
-    for (i = 0; i < c; ++i) {
-        lbo->placements[i].fpfn = 0;
-        lbo->placements[i].lpfn = 0;
-    }
+	return drmm_add_action_or_reset(drm, lsdc_ttm_fini, dev_priv);
 }
-
-
