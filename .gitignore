@@ -6,3 +6,6 @@
 Module.symvers
 modules.order
 tests/kms-smoke
+
+# Editor-generated symbol index
+tags

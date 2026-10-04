@@ -6,17 +6,14 @@ ccflags-y += -I$(src)
 
 obj-m += graphic.o
 
-graphic-y := lsdc_module.o \
-	     lsdc_pci.o \
-	     lsdc_driver.o \
-	     soc/lsdc_gmch.o \
-	     lsdc_region_ttm.o \
-	     lsdc_gem.o \
-	     gem/lsdc_gem_ttm.o \
-	     display/lsdc_display_driver.o \
-	     display/lsdc_plane.o \
-	     display/lsdc_crtc.o \
-	     display/lsdc_output.o
+graphic-y := graphic_drv.o \
+	     memory/graphic_bo.o \
+	     hardware/ls7a2000.o \
+	     display/graphic_kms.o \
+	     display/graphic_plane.o \
+	     display/graphic_crtc.o \
+	     display/graphic_output.o \
+	     display/graphic_flip.o
 
 else
 

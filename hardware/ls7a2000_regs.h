@@ -1,0 +1,72 @@
+/* SPDX-License-Identifier: GPL-2.0 */
+/* Private MMIO definitions: LS7A2000 user manual V1.3, chapter 20. */
+#ifndef GRAPHIC_LS7A2000_REGS_H
+#define GRAPHIC_LS7A2000_REGS_H
+
+#include <linux/bits.h>
+
+#define DC_PIPE_REG(reg, pipe) ((reg) + (pipe) * 0x10)
+#define DC_FB_CONFIG 0x1240
+#define DC_FB_ADDRESS0 0x1260
+#define DC_FB_STRIDE 0x1280
+#define DC_FB_ORIGIN 0x1300
+#define DC_DITHER 0x1360
+#define DC_PANEL 0x13c0
+#define DC_HDISPLAY 0x1400
+#define DC_HSYNC 0x1420
+#define DC_VDISPLAY 0x1480
+#define DC_VSYNC 0x14a0
+#define DC_INTERRUPT 0x1570
+#define DC_FB_ADDRESS1 0x1580
+#define DC_HDMI 0x1720
+#define DC_PHY 0x1800
+#define DC_PHY_PLL 0x1820
+#define DC_VSYNC_COUNT 0x1a00
+#define DC_PIXEL_PLL_LOW 0x1a20
+#define DC_PIXEL_PLL_HIGH 0x1a40
+#define DC_SYNC_DEVIATION 0x1b80
+#define DC_HOTPLUG 0x1ba0
+
+#define FB_RESET BIT(20)
+#define FB_DMA GENMASK(17, 16)
+#define FB_GAMMA BIT(12)
+#define FB_BANK BIT(11)
+#define FB_CROSS_ROUTE BIT(9)
+#define FB_ENABLE BIT(8)
+#define FB_SWITCH BIT(7)
+#define FB_TILE GENMASK(5, 4)
+#define FB_FORMAT GENMASK(2, 0)
+#define FB_ARGB8888 4
+#define SYNC_INVERT BIT(31)
+#define SYNC_ENABLE BIT(30)
+#define SYNC_DEVIATION_ENABLE BIT(31)
+#define H_COUNT_LOW GENMASK(12, 0)
+#define H_COUNT_HIGH GENMASK(28, 16)
+#define V_COUNT_LOW GENMASK(11, 0)
+#define V_COUNT_HIGH GENMASK(27, 16)
+#define PANEL_ENABLE (BIT(8) | BIT(0))
+#define HDMI_ENABLE BIT(0)
+#define PHY_ENABLE BIT(0)
+#define PHY_RESET_N BIT(1)
+#define PHY_CONTROLS (BIT(0) | BIT(1) | BIT(2) | BIT(3) | \
+		      GENMASK(9, 8) | BIT(10) | GENMASK(13, 12))
+#define PHY_PLL_ENABLE BIT(0)
+#define PHY_PLL_LOCKED BIT(16)
+#define PHY_PLL_BYPASS BIT(17)
+#define PHY_PLL_CONTROLS (GENMASK(15, 0) | BIT(17))
+#define PIXEL_DIVOUT GENMASK(6, 0)
+#define PIXEL_LOOP GENMASK(29, 21)
+#define PIXEL_DIVREF GENMASK(6, 0)
+#define PIXEL_LOCKED BIT(7)
+#define PIXEL_SELECTED BIT(8)
+#define PIXEL_BYPASS BIT(12)
+#define PIXEL_POWERDOWN BIT(13)
+#define PIXEL_LOCAL_CONFIG BIT(14)
+#define PIXEL_REFERENCE_KHZ 100000
+#define IRQ_VSYNC0 BIT(2)
+#define IRQ_VSYNC1 BIT(0)
+#define CURSOR_ARGB8888 2
+#define CURSOR_64 BIT(2)
+#define CURSOR_ROUTE BIT(4)
+
+#endif
