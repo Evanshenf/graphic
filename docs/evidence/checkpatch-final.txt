@@ -1,0 +1,84 @@
+----------------------
+display/graphic_crtc.c
+----------------------
+total: 0 errors, 0 warnings, 0 checks, 160 lines checked
+
+display/graphic_crtc.c has no obvious style problems and is ready for submission.
+-------------------------
+display/graphic_display.h
+-------------------------
+total: 0 errors, 0 warnings, 0 checks, 106 lines checked
+
+display/graphic_display.h has no obvious style problems and is ready for submission.
+----------------------
+display/graphic_flip.c
+----------------------
+total: 0 errors, 0 warnings, 0 checks, 175 lines checked
+
+display/graphic_flip.c has no obvious style problems and is ready for submission.
+---------------------
+display/graphic_kms.c
+---------------------
+total: 0 errors, 0 warnings, 0 checks, 240 lines checked
+
+display/graphic_kms.c has no obvious style problems and is ready for submission.
+---------------------
+display/graphic_kms.h
+---------------------
+total: 0 errors, 0 warnings, 0 checks, 11 lines checked
+
+display/graphic_kms.h has no obvious style problems and is ready for submission.
+------------------------
+display/graphic_output.c
+------------------------
+total: 0 errors, 0 warnings, 0 checks, 126 lines checked
+
+display/graphic_output.c has no obvious style problems and is ready for submission.
+-----------------------
+display/graphic_plane.c
+-----------------------
+total: 0 errors, 0 warnings, 0 checks, 385 lines checked
+
+display/graphic_plane.c has no obvious style problems and is ready for submission.
+----------------
+graphic_device.h
+----------------
+total: 0 errors, 0 warnings, 0 checks, 34 lines checked
+
+graphic_device.h has no obvious style problems and is ready for submission.
+-------------
+graphic_drv.c
+-------------
+total: 0 errors, 0 warnings, 0 checks, 226 lines checked
+
+graphic_drv.c has no obvious style problems and is ready for submission.
+-------------------
+hardware/ls7a2000.c
+-------------------
+total: 0 errors, 0 warnings, 0 checks, 406 lines checked
+
+hardware/ls7a2000.c has no obvious style problems and is ready for submission.
+-------------------
+hardware/ls7a2000.h
+-------------------
+total: 0 errors, 0 warnings, 0 checks, 79 lines checked
+
+hardware/ls7a2000.h has no obvious style problems and is ready for submission.
+------------------------
+hardware/ls7a2000_regs.h
+------------------------
+total: 0 errors, 0 warnings, 0 checks, 72 lines checked
+
+hardware/ls7a2000_regs.h has no obvious style problems and is ready for submission.
+-------------------
+memory/graphic_bo.c
+-------------------
+total: 0 errors, 0 warnings, 0 checks, 368 lines checked
+
+memory/graphic_bo.c has no obvious style problems and is ready for submission.
+-------------------
+memory/graphic_bo.h
+-------------------
+total: 0 errors, 0 warnings, 0 checks, 20 lines checked
+
+memory/graphic_bo.h has no obvious style problems and is ready for submission.

@@ -31,7 +31,9 @@ git diff 18c116156dead4d665ff216da8c5edd33bc80e0b -- graphic_drv.c memory displa
 
 方法包括整文件 SHA256/Git blob、去注释和空白后的连续行、保留变量名/常量/字符串的函数 token，以及人工核对。函数候选要求双方至少30个 token、匹配比例至少0.78；这个阈值只帮助定位，不能产生“原创率”或对来源的自动判决。
 
-完整实验记录和机器清单位于 [source-provenance.md](../../../evidence/2026-10-04/graphic-architecture/source-provenance.md) / [source-provenance.json](../../../evidence/2026-10-04/graphic-architecture/source-provenance.json)。这些是实验工作区内的相对链接；主要结论、固定提交和复查命令保留在本文，源码单独分发时也能理解。
+来源核对的固定提交、哈希、行号和方法保留在本文，可直接用上述 `git show`
+命令复查。本次公开分发的第三方版权与许可全文见 [NOTICE](../NOTICE.md)。
+本地实验路径不作为源码分发的依赖。
 
 ## 原版中已经核实的匹配
 

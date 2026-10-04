@@ -1,0 +1,74 @@
+INFO BAR0=0xe0041110000 initial IRQ enables=0x1
+INFO connector=44 CRTC=50 pipe=1 mode=1920x1080
+INJECT IRQ enables 0x1 -> 0; expect one driver flip timeout
+OBSERVE B: result=0 elapsed=10273.221 ms FB_CONFIG=0x100104 CURSOR_CONFIG=0x16 IRQ=0x10000
+PASS recovery: B returned with FB_ENABLE and ARGB cursor enabled
+NOTE B check timing is inferred from blocking API ordering and elapsed time; no tracepoint assertion
+OBSERVE eventless cursor replace: 16.620 ms counter=156054->156055
+OBSERVE eventless cursor move: 0.012 ms counter=156055->156055
+OBSERVE single position-only move: expected=0x6000a0 sample_delay_us=100 frame_ms=16.623122 deadline_after_return_ms=38.246244
+SAMPLE single position-only move: after_submit_ms=0.020460 after_return_ms=0.008540 location=0x400040 counter=156055..156055 advance=0
+SAMPLE single position-only move: after_submit_ms=16.617900 after_return_ms=16.605980 location=0x6000a0 counter=156056..156056 advance=1
+PASS single position-only move settled: first_observed_after_submit_ms=16.617900 after_return_ms=16.605980 counter_advance=1 samples=110
+PASS eventless cursor: replacement advanced a frame, move coordinates matched; old BO closed
+EVENT long-vblank-reference sequence=18519
+EVENT timed-out-flip-A sequence=18519
+EVENT normal-final-flip sequence=18524
+PASS normal IRQ-driven page flip after recovery
+OBSERVE batch final position: expected=0x25f0703 sample_delay_us=100 frame_ms=16.623122 deadline_after_return_ms=38.246244
+SAMPLE batch final position: after_submit_ms=0.011940 after_return_ms=0.005000 location=0x6000a0 counter=156057..156057 advance=0
+SAMPLE batch final position: after_submit_ms=14.472440 after_return_ms=14.465500 location=0x25f0703 counter=156058..156058 advance=1
+PASS batch final position settled: first_observed_after_submit_ms=14.472440 after_return_ms=14.465500 counter_advance=1 samples=96
+MEASURE same-FB visible cursor: samples=300 ioctlErrors=0 immediate_matches=0 immediate_misses=300 observed_location_changes=0 mean_ms=0.007025 p50_ms=0.006980 p95_ms=0.007060 max_ms=0.012050 submission_total_ms=2.210 calls_per_second=135751.520 counter_before=156057 after_batch=156057 after_settle=156058
+NOTE throughput includes readback but excludes final settle; immediate misses may reflect coalescing, not a proven latch rule
+PASS 300 same-FB moves: zero ioctl errors and final hardware position confirmed within deadline
+RESTORE IRQ by driver stop/modeset: original=0x1 injected=0x1 final=0x1 (enables only)
+PASS original CRTC/connector route restored; cursor hidden
+PASS fault/recovery test (supervisor must correlate new dmesg)
+INFO node=/dev/dri/by-path/pci-0000:00:06.1-card driver=graphic version=1.2.0
+PASS DRM master and dumb-buffer capability
+PASS output: connector=44 CRTC=50 index=1 mode=1920x1080 clock=148889 kHz h=1920/2008/2052/2200 v=1080/1084/1089/1125 flags=0x0
+PASS save: active=1 fb=51 connectors=1
+PASS color-bars initial-zero: 8306688 bytes hash=a114249924292325
+PASS color-bars create/map/AddFB2: handle=1 fb=53 1920x1080 pitch=7680
+PASS checkerboard initial-zero: 8306688 bytes hash=a114249924292325
+PASS checkerboard create/map/AddFB2: handle=2 fb=54 1920x1080 pitch=7680
+PASS cursor initial-zero: 16384 bytes hash=9c1bda7f8c872325
+PASS cursor create/map/AddFB2: handle=3 fb=55 64x64 pitch=256
+PASS color-bars fill: pattern=0 hash=67a56adf7b8f4b25
+PASS checkerboard fill: pattern=1 hash=11893aad25e08325
+PASS cursor fill: pattern=2 hash=bb75f18d1b708b7d
+PASS modeset: color-bars fb=53
+PASS vblank: seq=19228 timestamp=2592.238053 CRTC=50
+PASS flip 1/10: fb=54 seq=19229 timestamp=2592.254676 elapsed=16 ms
+PASS flip 2/10: fb=53 seq=19230 timestamp=2592.271300 elapsed=17 ms
+PASS flip 3/10: fb=54 seq=19231 timestamp=2592.287922 elapsed=16 ms
+PASS flip 4/10: fb=53 seq=19232 timestamp=2592.304546 elapsed=17 ms
+PASS flip 5/10: fb=54 seq=19233 timestamp=2592.321170 elapsed=17 ms
+PASS flip 6/10: fb=53 seq=19234 timestamp=2592.337793 elapsed=16 ms
+PASS flip 7/10: fb=54 seq=19235 timestamp=2592.354416 elapsed=17 ms
+PASS flip 8/10: fb=53 seq=19236 timestamp=2592.371040 elapsed=17 ms
+PASS flip 9/10: fb=54 seq=19237 timestamp=2592.387663 elapsed=16 ms
+PASS flip 10/10: fb=53 seq=19238 timestamp=2592.404286 elapsed=17 ms
+PASS ARGB cursor: 64x64 handle=3
+PASS cursor move: (100,100)
+PASS cursor move: (-16,-16)
+PASS cursor disable
+PASS CRTC disable: test scanout stopped
+PASS original CRTC/routing restored
+PASS cursor cleanup: RmFB/munmap/destroy
+PASS checkerboard cleanup: RmFB/munmap/destroy
+PASS color-bars cleanup: RmFB/munmap/destroy
+PASS result: modeset/vblank/10 flips/buffer cleanup; cursor=PASS
+active
+active
+7c7f9d2357ce36d580521bba42bd5f0f579d680c5fbf863ce2a3d426bec006d6  /home/virgo/graphic/graphic.ko
+[ 1864.318391] input: graphic-lab-absolute-latency as /devices/virtual/input/input15
+[ 2085.854622] graphic 0000:00:06.1: [drm] *ERROR* pipe 1 flip timed out; stopping scanout
+[ 2272.274802] Console: switching to colour dummy device 80x25
+[ 2272.473350] graphic 0000:00:06.1: [drm] VRAM: CPU 0x00000e0030000000, PCI bus 0x30000000, size 0x0000000010000000
+[ 2272.526618] [drm] Initialized graphic 1.2.0 for 0000:00:06.1 on minor 0
+[ 2272.669139] Console: switching to colour frame buffer device 120x33
+[ 2272.687943] graphic 0000:00:06.1: [drm] fb0: graphicdrmfb frame buffer device
+[ 2283.742620] graphic 0000:00:06.1: [drm] *ERROR* pipe 1 flip timed out; stopping scanout
+[ 2580.446619] graphic 0000:00:06.1: [drm] *ERROR* pipe 1 flip timed out; stopping scanout

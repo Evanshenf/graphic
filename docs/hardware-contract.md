@@ -2,7 +2,8 @@
 
 本文限定 [hardware/ls7a2000.h](../hardware/ls7a2000.h) 后端的职责。新实现硬件依据是《龙芯7A2000独显桥片用户手册 V1.3》；通用 DRM/TTM API 规定软件对象语义。旧 Loongson/i915 源码只用于 [来源核对](source-provenance.md)，不用于填补硬件手册缺口。
 
-本地实验资料：[手册摘录与缺口记录](../../../evidence/2026-10-04/graphic-rewrite/manual-display-spec.md)、[PDF](../../../docs/manuals/LS7A2000-user-manual-v1.3.pdf)。这些相对路径对应实验工作区，不是驱动编译依赖；单独分发源码时，可凭文件名和以下校验值识别手册。
+硬件依据可从龙芯官网下载：[LS7A2000 用户手册 V1.3](https://www.loongson.cn/uploads/images/2026072209584421844.%E9%BE%99%E8%8A%AF7A2000%E7%8B%AC%E6%98%BE%E6%A1%A5%E7%89%87%E7%94%A8%E6%88%B7%E6%89%8B%E5%86%8C_V1.3.pdf)。
+PDF 不随仓库重新分发；以下校验值用于核对本次实际使用的版本。
 
 - 文件名：`LS7A2000-user-manual-v1.3.pdf`，224 页。
 - SHA256：`ed310fec83341ca1de5ee0cb0d47f34e47e12d80ecf7989d5d662f362edc0764`。
